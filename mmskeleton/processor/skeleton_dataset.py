@@ -15,21 +15,23 @@ pose_estimators = dict()
 
 def worker(inputs, results, gpu, detection_cfg, estimation_cfg):
     worker_id = current_process()._identity[0] - 1
+
     global pose_estimators
     if worker_id not in pose_estimators:
         pose_estimators[worker_id] = init_pose_estimator(
             detection_cfg, estimation_cfg, device=gpu)
+
     while True:
         idx, image = inputs.get()
 
         # end signal
         if image is None:
             return
-
+        
         res = inference_pose_estimator(pose_estimators[worker_id], image)
         res['frame_index'] = idx
         results.put(res)
-
+    
 
 def build(detection_cfg,
           estimation_cfg,
@@ -70,17 +72,21 @@ def build(detection_cfg,
     video_file_list = os.listdir(video_dir)
     prog_bar = ProgressBar(len(video_file_list))
     for video_file in video_file_list:
-
+        #print('video_file:',video_file)
         reader = mmcv.VideoReader(os.path.join(video_dir, video_file))
         video_frames = reader[:video_max_length]
         annotations = []
         num_keypoints = -1
 
         for i, image in enumerate(video_frames):
+            if image is None:
+                del video_frames[i]
+                continue
             inputs.put((i, image))
 
         for i in range(len(video_frames)):
             t = results.get()
+
             if not t['has_return']:
                 continue
 
