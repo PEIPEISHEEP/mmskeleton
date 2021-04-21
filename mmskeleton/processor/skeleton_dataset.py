@@ -27,10 +27,12 @@ def worker(inputs, results, gpu, detection_cfg, estimation_cfg):
         # end signal
         if image is None:
             return
-        
+        #print('results_i:',idx)
         res = inference_pose_estimator(pose_estimators[worker_id], image)
         res['frame_index'] = idx
+
         results.put(res)
+        #print('idx:',idx)
     
 
 def build(detection_cfg,
@@ -77,16 +79,23 @@ def build(detection_cfg,
         video_frames = reader[:video_max_length]
         annotations = []
         num_keypoints = -1
-
+        count_frame=0
         for i, image in enumerate(video_frames):
+            #print('input_i:',i)
+
             if image is None:
-                del video_frames[i]
                 continue
+
+            count_frame+=1
+
             inputs.put((i, image))
-
-        for i in range(len(video_frames)):
+        #print('\ncount_frame:',count_frame)
+        #print('len_frame',len(video_frames))
+        for i in range(count_frame):
+            #print('frame:',i)
             t = results.get()
-
+            #print('t:',t)
+            
             if not t['has_return']:
                 continue
 
